@@ -1,0 +1,10 @@
+#!/bin/bash
+/etc/init.d/quagga stop
+while read line
+do
+    ipv6network=`echo $line|awk '{print $1}'`
+    echo "ipv6network: $ipv6network"
+    NextHop=`echo $line|awk '{print $2}'`
+    echo "NextHop: $NextHop"
+    route -A inet6 add $ipv6network/64 gw $NextHop
+done < static_route_table

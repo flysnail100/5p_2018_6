@@ -1,0 +1,2 @@
+Hello World
+When Client receive the testfile, the spp_server.c test recv and send function successfully!
