@@ -16,6 +16,8 @@
 #include <sys/stat.h>
 #include <pthread.h>
 #include <assert.h>
+#include <inttypes.h>
+#include <stdint.h>
 
 #define SO_REUSEPORT 15
 
