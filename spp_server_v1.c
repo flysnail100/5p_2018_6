@@ -62,6 +62,23 @@ struct packet_t
 	unsigned char payload[PAYLOAD_LEN_TM];
 };
 
+uint8_t HexToChar(uint8_t temp)
+{
+	uint8_t res;
+
+	//需要大写转换的话，将a变为A即可
+	if(temp<10)
+	{
+		res = res + '0';
+	}
+	else
+	{
+		res = res - 10 + 'a';
+	}
+
+	return res;
+}
+
 int fill_packet(char *src, unsigned long size, struct packet_t *packet)
 {
 	//initialize the packet header
@@ -75,38 +92,104 @@ int fill_packet(char *src, unsigned long size, struct packet_t *packet)
 
 int config_staticroutetable(char recv_payload[])
 {
-	FILE *fp;
-	char table_buffer[40];
-	int len;
-	int offset = 0;
-
+	//要加个文件删除转存的逻辑，先这么写吧！
 	if(remove("static_route_table") == 0)
 	{
 		printf("old static_route_table has been removed.\n");
 	}
 	fp = fopen("static_route_table", "a");
-	len = strlen(recv_payload) + 1;
-	memcpy(table_buffer, recv_payload + offset, 40);
 
-	while(offset < PAYLOAD_LEN)
+	/*
+	StaticRouteTable的长度应该是TableBuffer的两倍，
+	但长度足够所以暂时设为该值。
+	*/
+	uint8_t TableBuffer[PAYLOAD_LEN];
+	char StaticRouteTable[PAYLOAD_LEN];
+	char RouteLine[32];
+	char RouteLineBuffer[40]; 
+
+	int fd;
+	if((fd=open("static_route_table",O_CREAT|O_WRONLY|O_TRUNC,0600))==-1)
 	{
-		memcpy(table_buffer, recv_payload + offset, 40);
-		if(strlen(table_buffer) == 0)
-		{
-			break;
-		}
-		fprintf(fp, "%s", table_buffer);
-		memset(table_buffer,0,sizeof(table_buffer));
-		offset = offset + 40;
-
-		memcpy(table_buffer, recv_payload + offset, 40);
-		fprintf(fp, " %s\n", table_buffer);
-		memset(table_buffer,0,sizeof(table_buffer));
-		offset = offset + 40;
+		perror("create or open file fail.");
+		return EXIT_FAILURE;
 	}
 
-	fclose(fp);
-	
+	int len_1;
+	len_1 = strlen(recv_payload);
+	int table_len = len_1 - 6;
+	printf("%d\n",len);
+
+	memcpy(TableBuffer, recv_payload + 6, table_len);
+
+	for(int i=0; i<table_len; i++)
+	{
+		StaticRouteTable[2*i]=HexToChar(TableBuffer[i]>>4);
+		StaticRouteTable[2*i+1]=HexToChar(TableBuffer[i]&0xf);
+	}
+
+	int len_2;
+	len_2 = strlen(StaticRouteTable);
+	printf("StaticRouteTable length: %d\n", len_2);
+	int count;
+	count = len_2/68;
+	printf("the number of route line: %d\n", count);
+
+	int a = 0;
+	int b = 0;
+	for(int c=0; c<count; c++)
+	{
+		memcpy(RouteLine, StaticRouteTable+68*c, 32);
+		for(int m=0; m<32; m++)
+		{
+			if(b == 4)
+			{
+				RouteLineBuffer[a]=':';
+				a++;
+				RouteLineBuffer[a]=RouteLine[m];
+				b=0;
+			}
+			else
+			{
+				RouteLineBuffer[a]=RouteLine[m];
+			}
+			a++;
+			b++;
+		}
+		strcat(RouteLineBuffer," ");
+		write(fd, RouteLineBuffer, 40);
+
+		memset(RouteLineBuffer, 39*sizeof(char), 0);
+		a=0;
+		b=0;
+
+		memcpy(RouteLine, StaticRouteTable+68*c+32, 32);
+		for(int n=0; n<32; n++)
+		{
+			if(b == 4)
+			{
+				RouteLineBuffer[a]=':';
+				a++;
+				RouteLineBuffer[a]=RouteLine[n];
+				b=0;
+			}
+			else
+			{
+				RouteLineBuffer[a]=RouteLine[n];
+			}
+			a++;
+			b++;
+		}
+		strcat(RouteLineBuffer,"\n");
+		write(fd, RouteLineBuffer, 40);
+
+		memset(RouteLineBuffer, 39*sizeof(char), 0);
+		a=0;
+		b=0;
+	}
+
+	close(fd);
+
 	system("echo 1234 | sudo -S ./configure_static_routetable");
 	printf("recv command: configure static route table successfully.\n");
 	return EXIT_SUCCESS;
