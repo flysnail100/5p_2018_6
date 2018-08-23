@@ -92,12 +92,10 @@ int fill_packet(char *src, unsigned long size, struct packet_t *packet)
 
 int config_staticroutetable(char recv_payload[])
 {
-	//要加个文件删除转存的逻辑，先这么写吧！
 	if(remove("static_route_table") == 0)
 	{
 		printf("old static_route_table has been removed.\n");
 	}
-	fp = fopen("static_route_table", "a");
 
 	/*
 	StaticRouteTable的长度应该是TableBuffer的两倍，
@@ -189,6 +187,8 @@ int config_staticroutetable(char recv_payload[])
 	}
 
 	close(fd);
+
+	system("echo 1234 | sudo -S cp static_route_table del_route_table");
 
 	system("echo 1234 | sudo -S ./configure_static_routetable");
 	printf("recv command: configure static route table successfully.\n");

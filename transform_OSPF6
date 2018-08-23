@@ -4,5 +4,5 @@ do
     ipv6network=`echo $line|awk '{print $1}'`
     echo "ipv6network: $ipv6network"
     route -A inet6 del $ipv6network/64
-done < static_route_table
+done < del_route_table
 /etc/init.d/quagga start
