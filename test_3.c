@@ -1,4 +1,4 @@
-//usage: ./test_1 <ip_serv> <port_serv>
+//usage: ./test_3 <ip_serv> <port_serv>
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -17,6 +17,8 @@
 #include <sys/stat.h>
 #include <pthread.h>
 #include <assert.h>
+#include <inttypes.h>
+#include <stdint.h>
 
 #define SPP_BUFF 752
 #define PAYLOAD_LEN 740
@@ -35,7 +37,7 @@ struct packet_t
 	unsigned int packet_seq_count:14;
 	unsigned int packet_len:16;
 
-	//header_assinstant_t header_assistant
+	//header_assistant 
 	unsigned int free_1:1;
 	unsigned int TM_ver:3;
 	unsigned int free_2:4;
@@ -49,16 +51,16 @@ struct packet_t
 	unsigned char payload[PAYLOAD_LEN];
 };
 
-int fill_packet(char *src, unsigned long size, struct packt_t *packet)
+int fill_packet(char *src, unsigned long size, struct packet_t *packet)
 {
-	//initialize the packet header
 	packet->ver = 0;
 	packet->type = 1;
 	packet->flag = 1;
 	packet->service_type = 131;
-	packet->service_sub_type = 1;
+	packet->service_sub_type = 3;
 
 	memcpy(packet->payload, src, size);
+
 	return EXIT_SUCCESS;
 }
 
@@ -92,74 +94,36 @@ int create_client_socket(int port, char* ipaddr)
 int main(int argc, char **argv)
 {
 	int sfd;
-	int fd;
 	socklen_t adr_sz;
-
-	struct stat buffer;
-	off_t = sz;
-
-	char databuf[SPP_BUFF];
-	char static_address[PAYLOAD_LEN_TM];
-	char route_table_path[100];
 
 	struct packet_t packet;
 	int l = sizeof(struct sockaddr_in6);
-	int m, count = 0;
+	int m;
+
+	char *buffer = "transform to OSPF6";
+	int len = sizeof(buffer);
 
 	if(argc!=3)
 	{
-		printf("error usage: %s <ip_serv> <port_serv>.",argv[0]);
+		printf("error usage: %s <ip_serv> <port_serv.>",argv[0]);
 		return EXIT_FAILURE;
 	}
 
 	sfd = create_client_socket(atoi(argv[2]), argv[1]);
 
-	while(1)
+	fill_packet(buffer, len, &packet);
+	m = sendto(sfd, (char *)(&packet), sizeof(packet), 0, (struct sockaddr*)&sock_serv, l);
+	if(m == -1)
 	{
-		fputs("Input static route table file to send(q to quit): ",stdout);
-		fgets(route_table_path, sizeof(route_table_path), stdin);
-		if(!strcmp(route_table_path, "q\n") || !strcmp(route_table_path, "Q\n"))
-			break;
-		if((fd = open(route_table_path, O_RDONLY)) == -1)
-		{
-			perror("file open failed.");
-			return EXIT_FAILURE;
-		}
-
-		if(stat(route_table_path, &buffer) == -1)
-		{
-			perror("file stat failed.");
-			return EXIT_FAILURE;
-		}
-		sz = buffer.st_size;
-
-		bzero(static_address, PAYLOAD_LEN_TM);
-		n = read(fd, static_address, PAYLOAD_LEN_TM);
-		fill_packet(static_address, n, &packet);
-		while(n)
-		{
-			if(n == -1)
-			{
-				perror("read data fails");
-				return EXIT_FAILURE;
-			}
-
-			m = sendto(sfd, (char *)(&packet), sizeof(packet), 0, (struct sockaddr*)&sock_serv, l);
-			if(m == -1)
-			{
-				perror("data send failed.");
-				return EXIT_FAILURE;
-			}	
-			count += m;
-			bzero(static_address, PAYLOAD_LEN_TM);
-			n = read(fd, static_address, PAYLOAD_LEN_TM);
-			fill_packet(static_address, n, &packet);
-		}
-		printf("size of file(send): %lld\n", sz);
-		printf("total size(send): %lld\n", count);
-
-		close(fd);
+		perror("data send failed.");
+		return EXIT_FAILURE;
 	}
+	else
+	{
+		printf("send success.\n");
+	}
+
 	close(sfd);
+
 	return 0;
 }

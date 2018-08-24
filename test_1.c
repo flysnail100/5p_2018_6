@@ -37,7 +37,7 @@ struct packet_t
 	unsigned int packet_seq_count:14;
 	unsigned int packet_len:16;
 
-	//header_assinstant_t header_assistant
+	//header_assistant
 	unsigned int free_1:1;
 	unsigned int TM_ver:3;
 	unsigned int free_2:4;
@@ -51,7 +51,7 @@ struct packet_t
 	unsigned char payload[PAYLOAD_LEN];
 };
 
-int fill_packet(char *src, unsigned long size, struct packt_t *packet)
+int fill_packet(char *src, unsigned long size, struct packet_t *packet)
 {
 	//initialize the packet header
 	packet->ver = 0;
